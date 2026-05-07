@@ -95,6 +95,17 @@ Lists all non-local environments and their containers, writes
 python list_environments.py
 ```
 
+## Container lifecycle
+
+Every action — script or interactive — goes through the same runner:
+
+1. Containers that are stopped get **started** (and waited until running).
+2. Running containers are **restarted** unless `--no-restart` is set
+   (default: restart for odoo, skip for psql).
+3. The action runs in parallel per environment.
+4. Containers that were **initially stopped** are **stopped again** at
+   the end, restoring the original state.
+
 ## Logs
 
 Every script writes a timestamped log to `logs/`
