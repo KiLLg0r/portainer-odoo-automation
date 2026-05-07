@@ -1,4 +1,4 @@
-# poartainer-odoo-automation
+# portainer-odoo-automation
 
 A small toolkit for running per-container automations across a fleet of
 Odoo deployments managed through Portainer. Useful when you have a
