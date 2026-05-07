@@ -1,0 +1,4 @@
+# EU production tenants
+odoo-client-a
+odoo-client-b
+odoo-client-c
