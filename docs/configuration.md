@@ -64,11 +64,38 @@ you need to reuse the toolkit elsewhere.
 
 ## Target files
 
-For the file-based picker in the interactive CLI:
+For the file-based picker in the interactive CLI. Drop files into
+`targets/` — both `.txt` and `.csv` are picked up. Contents of
+`targets/` are gitignored except `.gitkeep`, so user-specific lists
+won't accidentally land in the repo.
 
-- Drop `.txt` files in `targets/`.
+### `.txt`
+
 - One container name per line.
 - Blank lines are ignored.
 - Lines starting with `#` are ignored (comments).
 
-If `targets/` is missing or empty, the picker falls back to manual entry.
+```
+# EU production tenants
+odoo-client-a
+odoo-client-b
+```
+
+### `.csv`
+
+- The **first column** holds the container name. Header name irrelevant.
+- The **first row is treated as a header** and skipped.
+- Other columns are ignored — useful for human-readable metadata
+  (env, owner, notes).
+- Empty cells, blank rows, and rows whose first cell starts with `#`
+  are skipped.
+
+```csv
+name,env,owner
+odoo-client-a,staging,team-a
+odoo-client-b,prod,team-b
+# odoo-client-c,prod,disabled
+```
+
+If `targets/` is missing or contains no `.txt`/`.csv` files, the picker
+falls back to manual entry.

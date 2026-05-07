@@ -104,9 +104,10 @@ Prompts the user to pick container names from one of three sources:
 - **Manual** — comma-separated text.
 - **Live** — multi-select over containers fetched from Portainer
   (filtered by `suffix_filter` if provided, e.g. `"_db"` for psql).
-- **File** — pick a `.txt` from `targets/`. One name per line; blank
-  lines and `#` comments ignored. Falls back to manual if `targets/` is
-  missing or empty.
+- **File** — pick a `.txt` or `.csv` from `targets/`. For `.txt`, one
+  name per line; blank lines and `#` comments ignored. For `.csv`, the
+  first column is the container name and the first row is treated as a
+  header. Falls back to manual if `targets/` is missing or empty.
 
 Pass `client=None` to disable the "live" option (the `list_envs`
 automation doesn't take targets, so it doesn't call this).

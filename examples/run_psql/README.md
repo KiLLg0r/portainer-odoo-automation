@@ -57,9 +57,9 @@ python run_psql.py --targets odoo-client-a \
     --sql "BEGIN; UPDATE res_company SET enable_name_update=True WHERE id=1; COMMIT;"
 ```
 
-## Sample target file
+## Sample target files
 
-`targets/all-prod.txt`:
+Plain text — `targets/all-prod.txt`:
 
 ```
 # All production tenants (EU + US)
@@ -70,7 +70,21 @@ odoo-client-us-1
 odoo-client-us-2
 ```
 
-(See [`all-prod.txt`](all-prod.txt) in this folder.)
+CSV with metadata — `targets/all-prod.csv`:
+
+```csv
+name,env,owner,notes
+odoo-client-a,prod-eu,team-a,
+odoo-client-b,prod-eu,team-b,migrated 2026-04
+odoo-client-c,prod-eu,team-a,
+odoo-client-us-1,prod-us,team-c,
+odoo-client-us-2,prod-us,team-c,
+```
+
+The first column is the container name; the rest are notes for humans.
+
+(See [`all-prod.txt`](all-prod.txt) and [`all-prod.csv`](all-prod.csv)
+in this folder.)
 
 ## Exit codes
 

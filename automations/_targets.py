@@ -7,6 +7,7 @@ Three sources:
 """
 from __future__ import annotations
 
+import csv
 from pathlib import Path
 
 import questionary
@@ -15,6 +16,7 @@ from portainer_client import PortainerClient
 
 
 TARGETS_DIR = Path("targets")
+_FILE_EXTS = {".txt", ".csv"}
 
 
 def _from_manual() -> list[str]:
@@ -53,20 +55,7 @@ def _from_live(client: PortainerClient,
     return [name_lookup[s] for s in selected]
 
 
-def _from_file() -> list[str]:
-    if not TARGETS_DIR.is_dir():
-        print(f"No '{TARGETS_DIR}/' directory found. "
-              "Falling back to manual entry.")
-        return _from_manual()
-    files = sorted(p.name for p in TARGETS_DIR.iterdir() if p.suffix == ".txt")
-    if not files:
-        print(f"No .txt files in '{TARGETS_DIR}/'. "
-              "Falling back to manual entry.")
-        return _from_manual()
-    pick = questionary.select("Pick a target file:", choices=files).ask()
-    if pick is None:
-        return []
-    path = TARGETS_DIR / pick
+def _parse_txt(path: Path) -> list[str]:
     names: list[str] = []
     for line in path.read_text(encoding="utf-8").splitlines():
         line = line.strip()
@@ -74,6 +63,43 @@ def _from_file() -> list[str]:
             continue
         names.append(line)
     return names
+
+
+def _parse_csv(path: Path) -> list[str]:
+    """First column = container name. Header row is skipped."""
+    names: list[str] = []
+    with path.open(encoding="utf-8", newline="") as f:
+        reader = csv.reader(f)
+        rows = iter(reader)
+        next(rows, None)  # skip header
+        for row in rows:
+            if not row:
+                continue
+            name = row[0].strip()
+            if not name or name.startswith("#"):
+                continue
+            names.append(name)
+    return names
+
+
+def _from_file() -> list[str]:
+    if not TARGETS_DIR.is_dir():
+        print(f"No '{TARGETS_DIR}/' directory found. "
+              "Falling back to manual entry.")
+        return _from_manual()
+    files = sorted(p.name for p in TARGETS_DIR.iterdir()
+                   if p.suffix in _FILE_EXTS)
+    if not files:
+        print(f"No .txt or .csv files in '{TARGETS_DIR}/'. "
+              "Falling back to manual entry.")
+        return _from_manual()
+    pick = questionary.select("Pick a target file:", choices=files).ask()
+    if pick is None:
+        return []
+    path = TARGETS_DIR / pick
+    if path.suffix == ".csv":
+        return _parse_csv(path)
+    return _parse_txt(path)
 
 
 def select_targets(client: PortainerClient | None,

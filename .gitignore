@@ -223,3 +223,7 @@ logs/
 docs/superpowers/
 .claude/
 .idea/
+
+# User target files (keep the directory, ignore contents)
+targets/*
+!targets/.gitkeep

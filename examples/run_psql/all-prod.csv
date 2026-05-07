@@ -1,0 +1,6 @@
+name,env,owner,notes
+odoo-client-a,prod-eu,team-a,
+odoo-client-b,prod-eu,team-b,migrated 2026-04
+odoo-client-c,prod-eu,team-a,
+odoo-client-us-1,prod-us,team-c,
+odoo-client-us-2,prod-us,team-c,
