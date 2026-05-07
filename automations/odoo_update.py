@@ -8,6 +8,7 @@ import questionary
 from portainer_client import client_from_env
 from automation_runner import find_targets, setup_logging, run_on_targets
 from update_odoo_module import make_odoo_update_action
+import config
 
 from ._targets import select_targets
 from ._confirm import confirm_and_run
@@ -24,14 +25,15 @@ def run_interactive() -> int:
         print("No targets selected.")
         return 2
 
+    default_modules = ",".join(config.ODOO_DEFAULT_MODULES)
     modules_input = questionary.text(
-        "Modules (comma-separated, default: dp_base):"
+        f"Modules (comma-separated, default: {default_modules}):"
     ).ask()
     if modules_input is None:
         return 130
     modules = [m.strip() for m in modules_input.split(",") if m.strip()]
     if not modules:
-        modules = ["dp_base"]
+        modules = list(config.ODOO_DEFAULT_MODULES)
 
     restart = questionary.confirm(
         "Restart running containers before the update?",
@@ -55,7 +57,8 @@ def run_interactive() -> int:
             return 2
         failures = run_on_targets(
             client, resolved, make_odoo_update_action(modules),
-            no_restart=not restart, per_env_workers=10,
+            no_restart=not restart,
+            per_env_workers=config.PER_ENV_WORKERS_DEFAULT,
         )
         if failures:
             print(f"\nFailed: {failures}")

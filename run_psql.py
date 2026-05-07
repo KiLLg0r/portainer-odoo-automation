@@ -15,6 +15,7 @@ from portainer_client import client_from_env, Container, PortainerClient
 from automation_runner import (
     find_targets, make_argparser, setup_logging, run_on_targets,
 )
+import config
 
 
 # Edit this list, or pass --targets name1,name2 on the CLI.
@@ -56,12 +57,17 @@ def build_sql(args) -> str:
 
 
 def make_psql_action(sql: str):
-    """Build a per-container action that runs
-    `psql -U {name} -d {name} -c <sql>` inside the {name}_db container."""
+    """Build a per-container action that runs psql against a DB container.
+
+    The user/db are templated from `config.PSQL_USER_TEMPLATE` and
+    `config.PSQL_DB_TEMPLATE` with `{name}` = container basename
+    (without `config.DB_CONTAINER_SUFFIX`)."""
     def psql_action(client: PortainerClient,
                     c: Container) -> tuple[int, str]:
-        user = c.name.removesuffix("_db")
-        cmd = ["psql", "-U", user, "-d", user, "-c", sql]
+        name = c.name.removesuffix(config.DB_CONTAINER_SUFFIX)
+        user = config.PSQL_USER_TEMPLATE.format(name=name)
+        db = config.PSQL_DB_TEMPLATE.format(name=name)
+        cmd = ["psql", "-U", user, "-d", db, "-c", sql]
         return client.exec_run(c, cmd)
     return psql_action
 
@@ -98,7 +104,8 @@ def main() -> int:
               file=sys.stderr)
         return 2
 
-    db_names = [f"{n.removesuffix('_db')}_db" for n in names]
+    suffix = config.DB_CONTAINER_SUFFIX
+    db_names = [f"{n.removesuffix(suffix)}{suffix}" for n in names]
 
     client = client_from_env()
     targets = find_targets(client, db_names)

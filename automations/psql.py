@@ -8,6 +8,7 @@ import questionary
 from portainer_client import client_from_env
 from automation_runner import find_targets, setup_logging, run_on_targets
 from run_psql import make_psql_action
+import config
 
 from ._targets import select_targets
 from ._confirm import confirm_and_run
@@ -20,14 +21,15 @@ DESCRIPTION = ("Run an SQL statement inside {name}_db containers, as user "
 
 def run_interactive() -> int:
     client = client_from_env()
-    targets = select_targets(client, suffix_filter="_db")
+    suffix = config.DB_CONTAINER_SUFFIX
+    targets = select_targets(client, suffix_filter=suffix)
     if not targets:
         print("No targets selected.")
         return 2
 
-    # Accept either app names or already-suffixed _db names.
-    app_names = [n.removesuffix("_db") for n in targets]
-    db_names = [f"{n}_db" for n in app_names]
+    # Accept either app names or already-suffixed names.
+    app_names = [n.removesuffix(suffix) for n in targets]
+    db_names = [f"{n}{suffix}" for n in app_names]
 
     sql = questionary.text(
         "SQL to run (single statement; use --sql in CLI for multi-line):",
@@ -61,7 +63,8 @@ def run_interactive() -> int:
             return 2
         failures = run_on_targets(
             client, resolved, make_psql_action(sql),
-            no_restart=not restart, per_env_workers=10,
+            no_restart=not restart,
+            per_env_workers=config.PER_ENV_WORKERS_DEFAULT,
         )
         if failures:
             print(f"\nFailed: {failures}")

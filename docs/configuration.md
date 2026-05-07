@@ -18,15 +18,18 @@ exported in your shell. Read by
 
 ### Behind an nginx basic-auth wall
 
-If Portainer sits behind nginx with HTTP basic auth (which adds an
-`Authorization: Basic …` header that Portainer would otherwise reject in
-combination with its own auth), set:
+If Portainer sits behind nginx (or any reverse proxy) with HTTP basic
+auth — which adds an `Authorization: Basic …` header that Portainer
+would otherwise reject in combination with its own auth — set:
 
 | Var | Notes |
 |---|---|
-| `PORTAINER_BASIC_AUTH_USER` | nginx basic-auth username |
-| `PORTAINER_BASIC_AUTH_PASSWORD` | nginx basic-auth password |
+| `NGINX_BASIC_AUTH_USER` | reverse-proxy basic-auth username |
+| `NGINX_BASIC_AUTH_PASSWORD` | reverse-proxy basic-auth password |
 | `PORTAINER_USERNAME` + `PORTAINER_PASSWORD` | **required** alongside basic auth — the client logs in to obtain a JWT and passes it via the `portainer_api_key` cookie (the same way the UI does). API key alone won't work behind basic auth. |
+
+`PORTAINER_BASIC_AUTH_USER` / `PORTAINER_BASIC_AUTH_PASSWORD` are kept
+as legacy aliases and still work.
 
 ### Other
 
@@ -47,20 +50,41 @@ Every script supports:
 
 Plus per-script flags — see [scripts.md](scripts.md).
 
-## Hardcoded values
+## Tunable defaults (env-driven)
 
-These are fixed for the current deployment but easy to parameterize if
-you need to reuse the toolkit elsewhere.
+All values default to the project's original hardcoded values, so
+unsetting them everywhere reproduces today's behavior. Defined and
+loaded in [`config.py`](../config.py).
 
-| Value | Where | Suggested env var (not yet implemented) |
+### Odoo
+
+| Var | Default | Notes |
 |---|---|---|
-| Odoo config path `/etc/odoo/odoo.conf` | [`update_odoo_module.py`](../update_odoo_module.py) | `ODOO_CONF_PATH` |
-| Odoo HTTP port `9999` | [`update_odoo_module.py`](../update_odoo_module.py) | `ODOO_HTTP_PORT` |
-| Default modules `dp_base` | [`update_odoo_module.py`](../update_odoo_module.py) `main()` | `ODOO_DEFAULT_MODULES` |
-| DB container suffix `_db` | [`run_psql.py`](../run_psql.py), [`automations/psql.py`](../automations/psql.py) | `DB_CONTAINER_SUFFIX` |
-| `psql -U {name} -d {name}` (user = db = container basename) | [`run_psql.py`](../run_psql.py) `make_psql_action` | could be templated |
-| `wait_running` timeout `120s` | [`automation_runner.py`](../automation_runner.py) `_process_target` | `WAIT_RUNNING_TIMEOUT` |
-| Targets directory `targets/` | [`automations/_targets.py`](../automations/_targets.py) `TARGETS_DIR` | `TARGETS_DIR` |
+| `ODOO_CONF_PATH` | `/etc/odoo/odoo.conf` | Passed as `odoo -c …`. |
+| `ODOO_HTTP_PORT` | `9999` | Passed as `odoo -p …`. |
+| `ODOO_DEFAULT_MODULES` | `dp_base` | Comma-separated. Used when `update_odoo_module.py` is run with no `--targets` override and no interactive override. |
+
+### psql / DB containers
+
+| Var | Default | Notes |
+|---|---|---|
+| `DB_CONTAINER_SUFFIX` | `_db` | DB container is `{app_name}{suffix}`. Change to `-postgres`, `-pg`, etc. |
+| `PSQL_USER_TEMPLATE` | `{name}` | `{name}` is the app container name (without the suffix). Use e.g. `odoo` for a fixed admin user. |
+| `PSQL_DB_TEMPLATE` | `{name}` | Same templating as the user. |
+
+### Runner
+
+| Var | Default | Notes |
+|---|---|---|
+| `WAIT_RUNNING_TIMEOUT` | `120` (seconds) | How long to wait for `state == "running"` after a start/restart. |
+| `PER_ENV_WORKERS_DEFAULT` | `10` | Default for `--per-env-workers`; the CLI flag wins when explicitly set. |
+
+### Still hardcoded
+
+| Value | Where | Why |
+|---|---|---|
+| Targets directory `targets/` | [`automations/_targets.py`](../automations/_targets.py) `TARGETS_DIR` | Convention; rarely worth changing. |
+| Default `--log-dir` `logs` | [`automation_runner.py`](../automation_runner.py) `make_argparser` | Already overridable per-run via `--log-dir`. |
 
 ## Target files
 

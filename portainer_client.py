@@ -205,8 +205,13 @@ def client_from_env() -> PortainerClient:
     pw = os.environ.get("PORTAINER_PASSWORD")
     verify = os.environ.get("PORTAINER_VERIFY_SSL", "true").lower() != "false"
 
-    ba_user = os.environ.get("PORTAINER_BASIC_AUTH_USER")
-    ba_pw = os.environ.get("PORTAINER_BASIC_AUTH_PASSWORD")
+    # NGINX_BASIC_AUTH_* is the canonical name (nginx reverse proxy in
+    # front of Portainer). PORTAINER_BASIC_AUTH_* is the legacy alias
+    # and still works.
+    ba_user = (os.environ.get("NGINX_BASIC_AUTH_USER")
+               or os.environ.get("PORTAINER_BASIC_AUTH_USER"))
+    ba_pw = (os.environ.get("NGINX_BASIC_AUTH_PASSWORD")
+             or os.environ.get("PORTAINER_BASIC_AUTH_PASSWORD"))
     basic_auth = (ba_user, ba_pw) if ba_user and ba_pw else None
 
     return PortainerClient(url, username=user, password=pw,

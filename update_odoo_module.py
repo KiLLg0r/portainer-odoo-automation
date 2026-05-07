@@ -10,6 +10,7 @@ from portainer_client import client_from_env, Container, PortainerClient
 from automation_runner import (
     find_targets, make_argparser, setup_logging, run_on_targets,
 )
+import config
 
 
 # Edit this list, or pass --targets name1,name2 on the CLI.
@@ -27,9 +28,9 @@ def make_odoo_update_action(modules: list[str]):
                            c: Container) -> tuple[int, str]:
         cmd = [
             "odoo",
-            "-c", "/etc/odoo/odoo.conf",
+            "-c", config.ODOO_CONF_PATH,
             "-u", modules_arg,
-            "-p", "9999",
+            "-p", config.ODOO_HTTP_PORT,
             "--stop-after-init",
             "-d", c.name,
         ]
@@ -59,7 +60,7 @@ def main() -> int:
         return 2
 
     failures = run_on_targets(
-        client, targets, make_odoo_update_action(["dp_base"]),
+        client, targets, make_odoo_update_action(config.ODOO_DEFAULT_MODULES),
         no_restart=not args.restart,
         per_env_workers=args.per_env_workers,
     )

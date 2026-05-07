@@ -17,6 +17,7 @@ from datetime import datetime
 from typing import Callable
 
 from portainer_client import PortainerClient, Container
+import config
 
 
 _print_lock = threading.Lock()
@@ -70,9 +71,10 @@ def make_argparser(description: str) -> argparse.ArgumentParser:
                              "(default: True). Pass --no-restart to skip.")
     parser.add_argument("--log-dir", default="logs",
                         help="Directory for log files (default: ./logs).")
-    parser.add_argument("--per-env-workers", type=int, default=10,
-                        help="Max concurrent containers per environment "
-                             "(default: 10).")
+    parser.add_argument("--per-env-workers", type=int,
+                        default=config.PER_ENV_WORKERS_DEFAULT,
+                        help=f"Max concurrent containers per environment "
+                             f"(default: {config.PER_ENV_WORKERS_DEFAULT}).")
     return parser
 
 
@@ -112,7 +114,7 @@ def _process_target(client: PortainerClient, c: Container,
             w(f"[restart] {c.name}")
             client.restart(c)
 
-        if not client.wait_running(c, timeout=120):
+        if not client.wait_running(c, timeout=config.WAIT_RUNNING_TIMEOUT):
             w(f"ERROR: {c.name} did not reach running state")
             failed = True
 
