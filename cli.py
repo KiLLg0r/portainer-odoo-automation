@@ -47,6 +47,9 @@ def main() -> int:
             code = 1
         print(f"\n[{module.LABEL}] finished with exit code {code}.\n")
 
+        if code == 130:
+            return 130
+
         again = questionary.confirm("Run another automation?",
                                     default=True).ask()
         if not again:

@@ -56,12 +56,13 @@ def _from_live(client: PortainerClient,
 def _from_file() -> list[str]:
     if not TARGETS_DIR.is_dir():
         print(f"No '{TARGETS_DIR}/' directory found. "
-              "Create it and add .txt files (one name per line).")
-        return []
+              "Falling back to manual entry.")
+        return _from_manual()
     files = sorted(p.name for p in TARGETS_DIR.iterdir() if p.suffix == ".txt")
     if not files:
-        print(f"No .txt files in '{TARGETS_DIR}/'.")
-        return []
+        print(f"No .txt files in '{TARGETS_DIR}/'. "
+              "Falling back to manual entry.")
+        return _from_manual()
     pick = questionary.select("Pick a target file:", choices=files).ask()
     if pick is None:
         return []
