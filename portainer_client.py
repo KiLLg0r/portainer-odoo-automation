@@ -171,8 +171,11 @@ class PortainerClient:
             params={"fromImage": image},
             headers=self._registry_auth_header(image),
             timeout=600,
+            stream=True,
         )
         r.raise_for_status()
+        for _ in r.iter_lines():
+            pass  # consume Docker's progress stream to keep the connection alive
 
     def remove_container(self, c: Container) -> None:
         r = self.session.delete(
