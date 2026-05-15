@@ -1,6 +1,7 @@
-"""Pull the latest image and recreate containers via Portainer's recreate API."""
+"""Pull the latest image and recreate containers via the Docker API."""
 from __future__ import annotations
 
+import io
 import sys
 import threading
 import time
@@ -22,20 +23,70 @@ _print_lock = threading.Lock()
 
 def image_update_action(client: PortainerClient,
                         c: Container) -> tuple[int, str]:
-    client.recreate_container(c, pull_image=True)
-    return 0, "Recreated."
+    buf = io.StringIO()
+
+    def w(line: str) -> None:
+        buf.write(line + "\n")
+
+    was_running = c.state == "running"
+    w(f"Image:  {c.image}")
+    w(f"State:  {'running' if was_running else 'stopped'}")
+
+    inspect = client.inspect_container(c)
+
+    w(f"Pulling {c.image}...")
+    client.pull_image(c.endpoint_id, c.image)
+    w("Pull complete.")
+
+    body = dict(inspect["Config"])
+    body["HostConfig"] = inspect["HostConfig"]
+    body["NetworkingConfig"] = {
+        "EndpointsConfig": inspect["NetworkSettings"]["Networks"]
+    }
+
+    if was_running:
+        w("Stopping...")
+        client.stop(c)
+
+    w("Removing old container...")
+    client.remove_container(c)
+
+    w("Creating new container...")
+    new_id = client.create_container(c.endpoint_id, c.name, body)
+    w(f"Created {new_id[:12]}.")
+
+    if was_running:
+        new_c = Container(
+            id=new_id, name=c.name, state="created",
+            image=c.image,
+            endpoint_id=c.endpoint_id, endpoint_name=c.endpoint_name,
+        )
+        w("Starting...")
+        client.start(new_c)
+        if not client.wait_running(new_c, timeout=config.WAIT_RUNNING_TIMEOUT):
+            w(f"ERROR: did not reach running state within "
+              f"{config.WAIT_RUNNING_TIMEOUT}s")
+            return 1, buf.getvalue()
+        w("Running.")
+
+    return 0, buf.getvalue()
 
 
 def _run_one(client: PortainerClient,
              c: Container) -> tuple[str, bool]:
+    buf = io.StringIO()
+    failed = False
     try:
         code, output = image_update_action(client, c)
-        failed = code != 0
+        buf.write(output)
+        if code != 0:
+            failed = True
     except Exception as e:
-        output = f"ERROR: {e}"
+        buf.write(f"ERROR: {e}\n")
         failed = True
     with _print_lock:
-        sys.stdout.write(f"\n===== {c.name} =====\n{output}\n")
+        sys.stdout.write(f"\n===== {c.name} =====\n")
+        sys.stdout.write(buf.getvalue())
         sys.stdout.flush()
     return c.name, failed
 
@@ -80,7 +131,7 @@ def run_image_update_on_targets(
 def main() -> int:
     started = time.monotonic()
     parser = make_argparser(
-        "Pull the latest image and recreate containers via Portainer."
+        "Pull the latest image and recreate containers via the Docker API."
     )
     args = parser.parse_args()
     setup_logging(args, "image_update")

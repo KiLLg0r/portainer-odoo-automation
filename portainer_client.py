@@ -144,14 +144,43 @@ class PortainerClient:
     def restart(self, c: Container) -> None:
         self._container_action(c, "restart")
 
-    def recreate_container(self, c: Container, pull_image: bool = True) -> None:
-        r = self.session.post(
+    def inspect_container(self, c: Container) -> dict:
+        r = self.session.get(
             f"{self.base_url}/api/endpoints/{c.endpoint_id}"
-            f"/docker/containers/{c.id}/recreate",
-            params={"pullImage": str(pull_image).lower()},
+            f"/docker/containers/{c.id}/json",
+            timeout=self.timeout,
+        )
+        r.raise_for_status()
+        return r.json()
+
+    def pull_image(self, endpoint_id: int, image: str) -> None:
+        r = self.session.post(
+            f"{self.base_url}/api/endpoints/{endpoint_id}/docker/images/create",
+            params={"fromImage": image},
             timeout=600,
         )
         r.raise_for_status()
+
+    def remove_container(self, c: Container) -> None:
+        r = self.session.delete(
+            f"{self.base_url}/api/endpoints/{c.endpoint_id}"
+            f"/docker/containers/{c.id}",
+            params={"v": "false"},
+            timeout=self.timeout,
+        )
+        if r.status_code != 404:
+            r.raise_for_status()
+
+    def create_container(self, endpoint_id: int, name: str, body: dict) -> str:
+        r = self.session.post(
+            f"{self.base_url}/api/endpoints/{endpoint_id}"
+            f"/docker/containers/create",
+            params={"name": name},
+            json=body,
+            timeout=self.timeout,
+        )
+        r.raise_for_status()
+        return r.json()["Id"]
 
     # --- exec ---
 
