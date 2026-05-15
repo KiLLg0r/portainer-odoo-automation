@@ -144,6 +144,15 @@ class PortainerClient:
     def restart(self, c: Container) -> None:
         self._container_action(c, "restart")
 
+    def recreate_container(self, c: Container, pull_image: bool = True) -> None:
+        r = self.session.post(
+            f"{self.base_url}/api/endpoints/{c.endpoint_id}"
+            f"/docker/containers/{c.id}/recreate",
+            params={"pullImage": str(pull_image).lower()},
+            timeout=600,
+        )
+        r.raise_for_status()
+
     # --- exec ---
 
     def exec_run(self, c: Container, cmd: list[str],

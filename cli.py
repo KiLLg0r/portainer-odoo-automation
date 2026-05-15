@@ -12,10 +12,10 @@ import traceback
 
 import questionary
 
-from automations import odoo_update, psql, list_envs
+from automations import odoo_update, psql, list_envs, image_update
 
 
-AUTOMATIONS = [odoo_update, psql, list_envs]
+AUTOMATIONS = [odoo_update, psql, image_update, list_envs]
 
 
 def _pick_automation():
