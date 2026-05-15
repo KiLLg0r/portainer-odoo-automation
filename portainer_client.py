@@ -1,6 +1,7 @@
 """Portainer API client: auth, list environments/containers, control + exec."""
 from __future__ import annotations
 
+import base64
 import os
 import json
 import time
@@ -153,10 +154,22 @@ class PortainerClient:
         r.raise_for_status()
         return r.json()
 
+    def _registry_auth_header(self, image: str) -> dict[str, str]:
+        """Return X-Registry-Auth header if image matches a Portainer registry."""
+        r = self.session.get(f"{self.base_url}/api/registries", timeout=self.timeout)
+        r.raise_for_status()
+        for reg in r.json():
+            url = reg.get("URL", "").rstrip("/")
+            if image.startswith(url + "/") or image.startswith(url + ":"):
+                payload = json.dumps({"registryId": reg["Id"]}).encode()
+                return {"X-Registry-Auth": base64.b64encode(payload).decode()}
+        return {}
+
     def pull_image(self, endpoint_id: int, image: str) -> None:
         r = self.session.post(
             f"{self.base_url}/api/endpoints/{endpoint_id}/docker/images/create",
             params={"fromImage": image},
+            headers=self._registry_auth_header(image),
             timeout=600,
         )
         r.raise_for_status()
