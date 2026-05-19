@@ -20,6 +20,23 @@ TARGETS: list[str] = [
 
 _print_lock = threading.Lock()
 
+# Per-endpoint pull locks: concurrent pulls of the same image cause Docker's
+# pull-deduplication to close the "follower" response streams prematurely
+# (manifests as "Response ended prematurely" in requests). Serialising pulls
+# per environment means the first worker does the real pull and the rest get
+# a fast "already up-to-date" response, then everyone recreates in parallel.
+_pull_locks: dict[int, threading.Lock] = {}
+_pull_locks_meta_lock = threading.Lock()
+
+
+def _get_pull_lock(endpoint_id: int) -> threading.Lock:
+    with _pull_locks_meta_lock:
+        lock = _pull_locks.get(endpoint_id)
+        if lock is None:
+            lock = threading.Lock()
+            _pull_locks[endpoint_id] = lock
+        return lock
+
 
 def image_update_action(client: PortainerClient,
                         c: Container) -> tuple[int, str]:
@@ -38,7 +55,8 @@ def image_update_action(client: PortainerClient,
     w(f"Image:  {image}")
 
     w(f"Pulling {image}...")
-    client.pull_image(c.endpoint_id, image)
+    with _get_pull_lock(c.endpoint_id):
+        client.pull_image(c.endpoint_id, image)
     w("Pull complete.")
 
     body = dict(inspect["Config"])
