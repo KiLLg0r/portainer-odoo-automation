@@ -29,13 +29,16 @@ def image_update_action(client: PortainerClient,
         buf.write(line + "\n")
 
     was_running = c.state == "running"
-    w(f"Image:  {c.image}")
     w(f"State:  {'running' if was_running else 'stopped'}")
 
     inspect = client.inspect_container(c)
+    # Use Config.Image — the named reference (e.g. registry/image:tag).
+    # c.image from list_containers may be a SHA digest on some Docker versions.
+    image = inspect["Config"]["Image"]
+    w(f"Image:  {image}")
 
-    w(f"Pulling {c.image}...")
-    client.pull_image(c.endpoint_id, c.image)
+    w(f"Pulling {image}...")
+    client.pull_image(c.endpoint_id, image)
     w("Pull complete.")
 
     body = dict(inspect["Config"])
@@ -58,7 +61,7 @@ def image_update_action(client: PortainerClient,
     if was_running:
         new_c = Container(
             id=new_id, name=c.name, state="created",
-            image=c.image,
+            image=image,
             endpoint_id=c.endpoint_id, endpoint_name=c.endpoint_name,
         )
         w("Starting...")
